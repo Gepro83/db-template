@@ -7,6 +7,7 @@ import java.util.concurrent.Executors
 
 object IntegrationSpec {
   private val db = Database.forConfig("postgresDb")
+  private val simpleDb = new SimpleDB("jdbc:postgresql://localhost:5432/db", "postgres", "postgres")
 }
 
 trait IntegrationSpec extends TestSuite {
@@ -38,8 +39,11 @@ trait IntegrationSpec extends TestSuite {
     super.afterEach()
   }
 
-  override protected def afterAll(): Unit =
+  override protected def afterAll(): Unit = {
     db.close()
+    simpleDb.close()
+  }
 
   def db: Database = IntegrationSpec.db
+  def simpleDb: SimpleDB = IntegrationSpec.simpleDb
 }

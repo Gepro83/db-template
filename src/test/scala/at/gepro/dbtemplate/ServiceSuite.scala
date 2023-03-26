@@ -17,9 +17,10 @@ class ServiceSuite extends TestSuite {
         case FlatMap(base, f) =>
           val firstResult = executeNow(base)
           executeNow(f(firstResult))
+        case Transaction(action) => executeNow(action)
       }
 
-    override def execute[T](action: Action[T]): Future[T] = Future.successful(executeNow(action))
+    override def execute[T](action: Action[T]): T = executeNow(action)
   }
 
   private val fastRepo = new InMemoryOrderRepository()

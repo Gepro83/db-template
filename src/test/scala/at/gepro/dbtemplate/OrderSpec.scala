@@ -7,9 +7,7 @@ import scala.concurrent.duration._
 final class OrderSpec extends IntegrationSpec {
   private val items = TableQuery[OrderItemTable]
   private val orders = TableQuery[OrderTable]
-  private val repo = new SlickOrderRepository(db, items, orders)
-  // private val repo = new alternative.FreeSlickOrderRepository(db, items, orders)
-  // import repo._
+  private val repo = new PostgresOrderRepository(simpleDb)
 
   private def getItems(): List[OrderItem] =
     Await.result(db.run(items.result.map(_.toList)), 5.seconds)
@@ -31,9 +29,9 @@ final class OrderSpec extends IntegrationSpec {
   test("executing saveItem action saves it") {
     val action = repo.saveItem(catFood)
 
-    whenReady(repo.execute(action)) { _ =>
-      getItems() mustBe List(catFood)
-    }
+    repo.execute(action)
+
+    getItems() mustBe List(catFood)
   }
 
   test("executing getOrder action returns order") {
@@ -41,17 +39,17 @@ final class OrderSpec extends IntegrationSpec {
 
     val action = repo.getOrder(1)
 
-    whenReady(repo.execute(action))(_ mustBe Order(1, 0.0))
+    repo.execute(action) mustBe Order(1, 0.0)
   }
 
-  test("executing updateOrder action updates it") {
+  test("executing saveOrder action updates it") {
     saveOrder(Order(1, 0.0))
 
     val action = repo.saveOrder(Order(1, 1.0))
 
-    whenReady(repo.execute(action)) { _ =>
-      getOrder(1) mustBe Order(1, 1.0)
-    }
+    repo.execute(action)
+
+    getOrder(1) mustBe Order(1, 1.0)
   }
 
   test("flatMap results in action sequence") {
@@ -60,9 +58,9 @@ final class OrderSpec extends IntegrationSpec {
     val action: Action[Unit] =
       repo.getOrder(1).flatMap(order => repo.saveOrder(order.copy(total = 1.0)))
 
-    whenReady(repo.execute(action)) { _ =>
-      getOrder(1) mustBe Order(1, 1.0)
-    }
+    repo.execute(action)
+
+    getOrder(1) mustBe Order(1, 1.0)
   }
 
   test("map results in mapped action") {
@@ -70,18 +68,43 @@ final class OrderSpec extends IntegrationSpec {
 
     val action: Action[Double] = repo.getOrder(1).map(_.total)
 
-    whenReady(repo.execute(action))(_ mustBe 0.0)
+    repo.execute(action) mustBe 0.0
   }
 
   test("action is executed transactionally") {
     saveOrder(Order(1, 0.0))
 
-    val action = repo.saveOrder(Order(1, 1.0)).flatMap(_ => throw new RuntimeException())
+    val action =
+      repo.saveOrder(Order(1, 1.0)).flatMap(_ => throw new RuntimeException()).transactionally
 
     intercept[Exception] {
-      Await.result(repo.execute(action), 5.seconds)
+      repo.execute(action)
     }
 
     getOrder(1) mustBe Order(1, 0.0)
+  }
+
+  test("mark specific action as transactional") {
+    val saveOrders = for {
+      _ <- repo.saveOrder(Order(1, 0.0))
+      _ <- repo.saveOrder(Order(2, 0.0))
+    } yield ()
+
+    val saveOrderFailing = repo
+      .saveOrder(Order(2, 1.0))
+      .flatMap(_ => throw new RuntimeException())
+      .transactionally
+
+    val combined = for {
+      _ <- saveOrders
+      _ <- saveOrderFailing
+    } yield ()
+
+    intercept[Exception] {
+      repo.execute(combined)
+    }
+
+    getOrder(1) mustBe Order(1, 0.0)
+    getOrder(2) mustBe Order(2, 0.0)
   }
 }

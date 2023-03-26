@@ -5,7 +5,7 @@ object Dependencies {
     "com.typesafe.slick" %% "slick" % "3.4.1",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.4.1",
     "org.slf4j" % "slf4j-nop" % "1.6.4", // slick needs that, does no logging, replace with real logging framework
-    "org.postgresql" % "postgresql" % "42.2.14",
+    "org.postgresql" % "postgresql" % "42.6.0",
     "org.typelevel" %% "cats-core" % "2.9.0",
     "org.typelevel" %% "cats-free" % "2.9.0",
   )
