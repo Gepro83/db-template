@@ -28,7 +28,28 @@ trait OrderRepository {
 }
 
 class PostgresOrderRepository(db: SimpleDB) extends OrderRepository {
-  private def executeNow[T](action: Action[T]): T =
+  private def transactionally[T](action: Action[T]): T =
+    action match {
+      case a: FlatMap[_, _] =>
+        val autocommit = db.autocommit
+        db.setAutocommit(false)
+        try {
+          val result = execute(a)
+          db.commit()
+          result
+        }
+        catch {
+          case e: Throwable =>
+            db.rollback()
+            throw e
+        }
+        finally
+          db.setAutocommit(autocommit)
+
+      case x => execute(x)
+    }
+
+  override def execute[T](action: Action[T]): T =
     action match {
       case SaveItem(item) =>
         db.execute(
@@ -43,35 +64,14 @@ class PostgresOrderRepository(db: SimpleDB) extends OrderRepository {
         db.execute(s"INSERT INTO orders VALUES(${order.id}, ${order.total});")
 
       case FlatMap(base, f) =>
-        val baseResult = executeNow(base)
-        executeNow(f(baseResult))
+        val baseResult = execute(base)
+        val nextAction = f(baseResult)
+        execute(nextAction)
 
       case SuccessAction(value) => value
 
-      case Transaction(action) =>
-        action match {
-          case a: FlatMap[_, _] =>
-            val autocommit = db.autocommit
-            db.setAutocommit(false)
-            try {
-              val result = executeNow(a)
-              db.commit()
-              result
-            }
-            catch {
-              case e: Throwable =>
-                db.rollback()
-                throw e
-            }
-            finally
-              db.setAutocommit(autocommit)
-
-          case x => executeNow(x)
-
-        }
+      case Transaction(action) => transactionally(action)
     }
-
-  override def execute[T](action: Action[T]): T = executeNow(action)
 }
 
 // goal
