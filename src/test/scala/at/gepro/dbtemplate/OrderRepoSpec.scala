@@ -4,7 +4,7 @@ import slick.jdbc.PostgresProfile.api._
 import scala.concurrent._
 import scala.concurrent.duration._
 
-final class OrderSpec extends IntegrationSpec {
+final class OrderRepoSpec extends IntegrationSpec {
   private val items = TableQuery[OrderItemTable]
   private val orders = TableQuery[OrderTable]
   private val repo = new PostgresOrderRepository(simpleDb)
