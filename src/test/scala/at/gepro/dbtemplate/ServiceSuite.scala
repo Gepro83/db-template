@@ -1,7 +1,6 @@
 package at.gepro.dbtemplate
 
 import scala.collection.mutable
-import scala.concurrent.Future
 
 class ServiceSuite extends TestSuite {
   class InMemoryOrderRepository() extends OrderRepository {

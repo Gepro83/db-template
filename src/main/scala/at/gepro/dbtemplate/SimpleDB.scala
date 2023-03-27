@@ -18,8 +18,10 @@ class SimpleDB(
   def setAutocommit(value: Boolean) = conn.setAutoCommit(value)
 
   // execute a SQL query that does not return a result set
-  def execute(sql: String): Unit =
+  def execute(sql: String): Unit = {
     stmt.executeUpdate(sql)
+    ()
+  }
 
   def executeQuery(sql: String): List[String] = {
     val rs = stmt.executeQuery(sql)

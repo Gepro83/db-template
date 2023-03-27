@@ -3,6 +3,7 @@ import Scalac.Keys._
 ThisBuild / scalacOptions ++= Seq(
   "-language:_",
   "-Ymacro-annotations",
+  "-Wconf:any:silent",
   "-Wunused:imports", // always on for OrganizeImports
 ) ++ Seq("-encoding", "UTF-8") ++ warnings.value ++ lint.value
 
@@ -13,7 +14,7 @@ ThisBuild / warnings := {
       "-Xfatal-warnings", // for wartremover warts
     )
   else if (lintOn.value)
-    Seq("-Wconf:any:warning")
+    Seq()
   else
     Seq("-Wconf:any:silent")
 }
