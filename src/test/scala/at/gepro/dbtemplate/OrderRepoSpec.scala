@@ -3,11 +3,14 @@ package at.gepro.dbtemplate
 import slick.jdbc.PostgresProfile.api._
 import scala.concurrent._
 import scala.concurrent.duration._
+import SlickMonad._
 
 final class OrderRepoSpec extends IntegrationSpec {
   private val items = TableQuery[OrderItemTable]
   private val orders = TableQuery[OrderTable]
   private val repo = new PostgresOrderRepository(simpleDb)
+  // private val repo = new FreeSlickOrderRepository(db, items, orders)
+  // import repo._
 
   private def getItems(): List[OrderItem] =
     Await.result(db.run(items.result.map(_.toList)), 5.seconds)
@@ -91,7 +94,8 @@ final class OrderRepoSpec extends IntegrationSpec {
     } yield ()
 
     val saveOrderFailing = repo
-      .saveOrder(Order(2, 1.0))
+      .getOrder(1)
+      .flatMap(order => repo.saveOrder(order.copy(total = 2.0)))
       .flatMap(_ => throw new RuntimeException())
       .transactionally
 

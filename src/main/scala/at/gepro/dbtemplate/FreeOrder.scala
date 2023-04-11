@@ -2,6 +2,7 @@ package at.gepro.dbtemplate
 
 import cats.Monad
 import scala.concurrent._
+import scala.concurrent.duration._
 import slick.jdbc.PostgresProfile.api._
 import scala.collection.mutable
 import cats.Id
@@ -21,13 +22,13 @@ trait FreeOrderRepository {
 
   protected type DbAction[_]
   protected def compiler: ActionA ~> DbAction
-  protected def run[T](f: DbAction[T]): Future[T]
+  protected def run[T](f: DbAction[T]): T
 
   def saveItem(item: OrderItem): Action[Unit] = liftF(SaveItemA(item))
   def getOrder(id: Int): Action[Order] = liftF(GetOrderA(id))
   def saveOrder(order: Order): Action[Unit] = liftF(SaveOrderA(order))
 
-  def execute[T](action: Action[T])(implicit m: Monad[DbAction]): Future[T] = run(
+  def execute[T](action: Action[T])(implicit m: Monad[DbAction]): T = run(
     action.foldMap(compiler)
   )
 }
@@ -39,7 +40,8 @@ class FreeSlickOrderRepository(
   )(implicit
     ec: ExecutionContext
   ) extends FreeOrderRepository {
-  override protected def run[T](action: DbAction[T]): Future[T] = db.run(action.transactionally)
+  override protected def run[T](action: DbAction[T]): T =
+    Await.result(db.run(action.transactionally), 5.seconds)
 
   override protected type DbAction[T] = DBIOAction[T, NoStream, Effect.All]
 
@@ -67,5 +69,5 @@ class FreeInMemoryRepository() extends FreeOrderRepository {
       }
   }
 
-  override protected def run[T](a: DbAction[T]): Future[T] = Future.successful(a)
+  override protected def run[T](a: DbAction[T]): T = a
 }
