@@ -89,8 +89,8 @@ final class OrderRepoSpec extends IntegrationSpec {
 
   test("mark specific action as transactional") {
     val saveOrders = for {
-      _ <- repo.saveOrder(Order(1, 0.0))
-      _ <- repo.saveOrder(Order(2, 0.0))
+      _ <- repo.saveOrder(Order(1, 1.0))
+      _ <- repo.saveOrder(Order(2, 1.0))
     } yield ()
 
     val saveOrderFailing = repo
@@ -108,7 +108,7 @@ final class OrderRepoSpec extends IntegrationSpec {
       repo.execute(combined)
     }
 
-    getOrder(1) mustBe Order(1, 0.0)
-    getOrder(2) mustBe Order(2, 0.0)
+    getOrder(1) mustBe Order(1, 1.0)
+    getOrder(2) mustBe Order(2, 1.0)
   }
 }
