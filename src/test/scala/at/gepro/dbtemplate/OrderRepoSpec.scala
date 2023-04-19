@@ -25,58 +25,45 @@ final class OrderRepoSpec extends IntegrationSpec {
 
   test("saveItem without execute does nothing") {
     repo.saveItem(catFood)
-
     getItems() mustBe List()
   }
 
   test("executing saveItem action saves it") {
     val action = repo.saveItem(catFood)
-
     repo.execute(action)
-
     getItems() mustBe List(catFood)
   }
 
   test("executing getOrder action returns order") {
     saveOrder(Order(1, 0.0))
-
     val action = repo.getOrder(1)
-
     repo.execute(action) mustBe Order(1, 0.0)
   }
 
   test("executing saveOrder action updates it") {
     saveOrder(Order(1, 0.0))
-
     val action = repo.saveOrder(Order(1, 1.0))
-
     repo.execute(action)
-
     getOrder(1) mustBe Order(1, 1.0)
   }
 
   test("flatMap results in action sequence") {
-    saveOrder(Order(1, 0.0))
-
+    saveOrder(Order(1, 1.0))
     val action: Action[Unit] =
-      repo.getOrder(1).flatMap(order => repo.saveOrder(order.copy(total = 1.0)))
+      repo.getOrder(1).flatMap(order => repo.saveOrder(order.copy(total = order.total + 1.0)))
 
     repo.execute(action)
-
-    getOrder(1) mustBe Order(1, 1.0)
+    getOrder(1) mustBe Order(1, 2.0)
   }
 
   test("map results in mapped action") {
     saveOrder(Order(1, 0.0))
-
     val action: Action[Double] = repo.getOrder(1).map(_.total)
-
     repo.execute(action) mustBe 0.0
   }
 
   test("action is executed transactionally") {
     saveOrder(Order(1, 0.0))
-
     val action =
       repo.saveOrder(Order(1, 1.0)).flatMap(_ => throw new RuntimeException()).transactionally
 

@@ -7,19 +7,16 @@ class ServiceSpec extends TestSuite {
     val items: mutable.Map[Int, OrderItem] = mutable.Map()
     val orders: mutable.Map[Int, Order] = mutable.Map()
 
-    private def executeNow[T](action: Action[T]): T =
+    override def execute[T](action: Action[T]): T =
       action match {
         case SuccessAction(value) => value
         case GetOrder(id) => orders(id)
         case SaveItem(item) => items(item.orderId) = item
         case SaveOrder(order) => orders(order.id) = order
         case FlatMap(base, f) =>
-          val firstResult = executeNow(base)
-          executeNow(f(firstResult))
-        case Transaction(action) => executeNow(action)
+          val firstResult = execute(base)
+          execute(f(firstResult))
       }
-
-    override def execute[T](action: Action[T]): T = executeNow(action)
   }
 
   private val repo = new InMemoryOrderRepository()

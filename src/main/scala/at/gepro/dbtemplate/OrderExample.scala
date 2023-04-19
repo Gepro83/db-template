@@ -7,10 +7,10 @@ case class OrderItem(
     price: Double,
   )
 
-sealed trait Action[A] {
-  def flatMap[B](f: A => Action[B]): Action[B] = FlatMap(this, f)
-  def map[B](f: A => B): Action[B] = flatMap(t => SuccessAction(f(t)))
-  def transactionally: Action[A] = Transaction(this)
+sealed trait Action[T] {
+  def flatMap[B](f: T => Action[B]): Action[B] = FlatMap(this, f)
+  def map[B](f: T => B): Action[B] = flatMap(t => SuccessAction(f(t)))
+  def transactionally: Action[T] = Transaction(this)
 }
 
 final case class SaveItem(item: OrderItem) extends Action[Unit]
